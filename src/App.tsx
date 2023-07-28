@@ -36,7 +36,7 @@ function App() {
         })
   }, [users]);
 
-    const throttledReceiveRandomUser = useCallback(useThrottle(receiveRandomUser, 3000), [])
+    const throttledReceiveRandomUser = useCallback(useThrottle(receiveRandomUser, 1000), [])
 
     const handleButtonClick = useCallback(() => {
         const ignore = throttledReceiveRandomUser()

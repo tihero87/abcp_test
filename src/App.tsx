@@ -1,4 +1,4 @@
-import React, {useCallback, useState, useRef} from 'react';
+import React, {useCallback, useState} from 'react';
 import './App.css';
 
 import {Button} from "./components/Button/Button";
@@ -11,45 +11,44 @@ import {useThrottle} from "./hooks/useThrottle";
 const URL = "https://jsonplaceholder.typicode.com/users";
 
 function App() {
-  const receiveRandomUserRef = useRef<(() => Promise<void>) | null>(null);
+    const [users, setUsers] = useState<Record<number, IUser>>({});
+    const [showUserId, setShowUserId] = useState(0);
 
-  const [item, setItem] = useState<Record<number, IUser>>({});
+    const receiveRandomUser = useCallback(async () => {
 
-  const [currentId, setCurrentId] = useState(0);
+    const id = (Math.ceil(Math.random() * 9));
 
-  receiveRandomUserRef.current = useCallback(async () => {
-    const id = (Math.floor(Math.random() * (10 - 1)) + 1);
-
-    if(item && item[id]){
-      setCurrentId(id)
-    } else {
-      try {
-        const response = await fetch(`${URL}/${id}`);
-        const _user = (await response.json()) as IUser;
-        setItem(prevState => ({...prevState, [id]: _user }));
-        setCurrentId(id)
-      } catch (error) {
-        console.error("Error fetching random user:", error);
-      }
+    if(users[id]){
+        setShowUserId(id)
+        return
     }
 
-  }, [item]);
+    await fetch(`${URL}/${id}`)
+        .then(response => response.json())
+        .then(user => {
+            if(Object.keys(user).length){
+                setUsers(prevState => ({...prevState, [id]: user }));
+                setShowUserId(id)
+            }
+        })
+        .catch(error => {
+            console.error("Error fetching random user:", error)
+        })
+  }, [users]);
 
+    const throttledReceiveRandomUser = useCallback(useThrottle(receiveRandomUser, 3000), [])
 
-  const throttledReceiveRandomUser = useThrottle(receiveRandomUserRef.current, 1000)
+    const handleButtonClick = useCallback(() => {
+        const ignore = throttledReceiveRandomUser()
+    }, [users])
 
-  const handleButtonClick = useCallback(() => {
-    const ignore = throttledReceiveRandomUser()
-  }, [item])
-
-  return (
-    <div className="App">
-      <h1>{currentId}</h1>
-      <header>Get a random user</header>
-      <Button onClick={handleButtonClick} />
-      <UserInfo user={item[currentId]} />
-    </div>
-  );
+    return (
+        <div className="App">
+            <header>Get a random user</header>
+            <Button onClick={handleButtonClick} />
+            <UserInfo user={users[showUserId]} />
+        </div>
+    );
 }
 
 export default App;
